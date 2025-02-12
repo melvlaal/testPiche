@@ -1,0 +1,13 @@
+spring:
+  profiles:
+    active: local
+  application:
+    name: piche
+  datasource:
+    url: jdbc:postgresql://localhost:5432/piche
+    username: postgres
+    password: postgres
+    driverClassName: org.postgresql.Driver
+  logging:
+    level:
+      org.springframework.jdbc: WARN
