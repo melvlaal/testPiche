@@ -13,7 +13,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.core.env.Environment;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -51,8 +50,6 @@ class BaseTest {
     private static final String ACCOUNT_NUMBER = "1111-1111-1111-1111";
     private static final String SECOND_ACCOUNT_NUMBER = "1111-1111-1111-1112";
     static final PostgreSQLContainer<?> postgreSQLContainer;
-    @Autowired
-    private Environment environment;
 
     static {
         postgreSQLContainer =
