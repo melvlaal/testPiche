@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.webjars.NotFoundException;
 
-
 @Slf4j
 @ControllerAdvice
 public class RestExceptionHandler {
