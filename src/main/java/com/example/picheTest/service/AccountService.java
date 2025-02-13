@@ -7,11 +7,12 @@ import com.example.picheTest.model.request.TransferRQ;
 import com.example.picheTest.model.request.WithdrawRQ;
 import com.example.picheTest.repository.AccountRepository;
 import com.example.picheTest.repository.entity.Account;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.webjars.NotFoundException;
 import java.util.List;
 
@@ -42,6 +43,7 @@ public class AccountService {
         }
     }
 
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public Account deposit(String accountNumber, DepositRQ depositRQ) {
         Account account = this.getAccount(accountNumber);
 
@@ -55,6 +57,7 @@ public class AccountService {
         return account;
     }
 
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
     public Account withdraw(String accountNumber, WithdrawRQ withdrawRQ) {
         Account account = this.getAccount(accountNumber);
         if (withdrawRQ == null || withdrawRQ.getAmount() == null) {
@@ -71,7 +74,7 @@ public class AccountService {
 
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public boolean transfer(TransferRQ transferRQ) {
         if (transferRQ == null || transferRQ.getFromAccountNumber() == null) {
             throw new IllegalArgumentException("From Account Number must be provided");
