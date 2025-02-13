@@ -10,4 +10,4 @@ spring:
     driverClassName: org.postgresql.Driver
   logging:
     level:
-      org.springframework.jdbc: WARN
+      org.springframework.jdbc: DEBUG

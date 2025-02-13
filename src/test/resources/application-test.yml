@@ -1,0 +1,5 @@
+spring:
+  active:
+    profiles: test
+  main:
+    allow-bean-definition-overriding: true
