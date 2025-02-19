@@ -24,7 +24,6 @@ import java.util.List;
 @AllArgsConstructor
 @Tag(name = "Account Management", description = "Operations related to bank accounts")
 class AccountController {
-    @Autowired
     private AccountService service;
 
     @GetMapping

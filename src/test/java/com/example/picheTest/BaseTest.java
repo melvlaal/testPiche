@@ -5,6 +5,8 @@ import com.example.picheTest.model.request.DepositRQ;
 import com.example.picheTest.model.request.TransferRQ;
 import com.example.picheTest.model.request.WithdrawRQ;
 import com.example.picheTest.repository.entity.Account;
+import com.example.picheTest.repository.entity.TransactionHistory;
+import com.example.picheTest.repository.entity.TransactionType;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
@@ -24,6 +26,8 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+import com.example.picheTest.repository.TransactionHistoryRepository;
+
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -42,6 +46,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class BaseTest {
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private TransactionHistoryRepository transactionHistoryRepository;
 
     @LocalServerPort
     private int port;
@@ -113,7 +120,13 @@ class BaseTest {
         assertNotNull(response.getBody(), "Response body should not be null");
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertEquals(ACCOUNT_NUMBER, response.getBody().getAccountNumber());
-        assertEquals(BigDecimal.valueOf(1000), response.getBody().getBalance());
+        assertEquals(0, response.getBody().getBalance().compareTo(BigDecimal.valueOf(1000)));
+
+        List<TransactionHistory> transactionHistory = transactionHistoryRepository
+                .findByAccountIdTo(response.getBody().getId());
+        assertFalse(transactionHistory.isEmpty(), "Transaction history should not be empty");
+        assertEquals(0, transactionHistory.get(0).getAmount().compareTo(BigDecimal.valueOf(1000)));
+        assertEquals(TransactionType.DEPOSIT, transactionHistory.get(0).getTransactionType());
     }
 
     @Test
@@ -189,7 +202,6 @@ class BaseTest {
         this.createAccount(ACCOUNT_NUMBER, BigDecimal.valueOf(1000));
         DepositRQ deposit = new DepositRQ(BigDecimal.valueOf(500));
 
-        // Отправляем POST запрос для пополнения счета
         String url = BASE_URL.formatted(port) + "/" + ACCOUNT_NUMBER + "/deposit";
         ResponseEntity<Account> response = restTemplate.postForEntity(url, deposit, Account.class);
 
@@ -197,6 +209,15 @@ class BaseTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(ACCOUNT_NUMBER, response.getBody().getAccountNumber());
         assertEquals(0, response.getBody().getBalance().compareTo(BigDecimal.valueOf(1500)));
+
+
+        List<TransactionHistory> transactionHistory = transactionHistoryRepository
+                .findByAccountIdTo(response.getBody().getId());
+        assertFalse(transactionHistory.isEmpty(), "Transaction history should not be empty");
+        assertEquals(0, transactionHistory.get(0).getAmount().compareTo(BigDecimal.valueOf(1000)));
+        assertEquals(TransactionType.DEPOSIT, transactionHistory.get(0).getTransactionType());
+        assertEquals(0, transactionHistory.get(1).getAmount().compareTo(BigDecimal.valueOf(500)));
+        assertEquals(TransactionType.DEPOSIT, transactionHistory.get(1).getTransactionType());
     }
 
     @Test
@@ -211,6 +232,17 @@ class BaseTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(ACCOUNT_NUMBER, response.getBody().getAccountNumber());
         assertEquals(0, response.getBody().getBalance().compareTo(BigDecimal.valueOf(700)));
+
+        List<TransactionHistory> transactionHistory = transactionHistoryRepository
+                .findByAccountIdTo(response.getBody().getId());
+        assertFalse(transactionHistory.isEmpty(), "Transaction history should not be empty");
+
+        assertEquals(0, transactionHistory.get(0).getAmount().compareTo(BigDecimal.valueOf(1000)));
+        assertEquals(TransactionType.DEPOSIT, transactionHistory.get(0).getTransactionType());
+        transactionHistory = transactionHistoryRepository
+                .findByAccountIdFrom(response.getBody().getId());
+        assertEquals(0, transactionHistory.get(0).getAmount().compareTo(BigDecimal.valueOf(300)));
+        assertEquals(TransactionType.WITHDRAW, transactionHistory.get(0).getTransactionType());
     }
 
     @Test
@@ -256,6 +288,20 @@ class BaseTest {
         assertEquals(HttpStatus.OK, secondAccountResponse.getStatusCode());
         assertEquals(SECOND_ACCOUNT_NUMBER, secondAccountResponse.getBody().getAccountNumber());
         assertEquals(0, secondAccountResponse.getBody().getBalance().compareTo(BigDecimal.valueOf(700)));
+
+        List<TransactionHistory> transactionHistoryFirstAccount = transactionHistoryRepository
+                .findByAccountIdTo(firstAccountResponse.getBody().getId());
+        assertFalse(transactionHistoryFirstAccount.isEmpty(), "Transaction history first account should not be empty");
+        assertEquals(0, transactionHistoryFirstAccount.get(0).getAmount().compareTo(BigDecimal.valueOf(1000)));
+        assertEquals(TransactionType.DEPOSIT, transactionHistoryFirstAccount.get(0).getTransactionType());
+
+        List<TransactionHistory> transactionHistorySecondAccount = transactionHistoryRepository
+                .findByAccountIdTo(secondAccountResponse.getBody().getId());
+        assertFalse(transactionHistorySecondAccount.isEmpty(), "Transaction history first account should not be empty");
+        assertEquals(0, transactionHistorySecondAccount.get(0).getAmount().compareTo(BigDecimal.valueOf(500)));
+        assertEquals(TransactionType.DEPOSIT, transactionHistorySecondAccount.get(0).getTransactionType());
+        assertEquals(0, transactionHistorySecondAccount.get(1).getAmount().compareTo(BigDecimal.valueOf(200)));
+        assertEquals(TransactionType.TRANSFER, transactionHistorySecondAccount.get(1).getTransactionType());
     }
 
     @Test

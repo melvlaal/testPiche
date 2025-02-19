@@ -6,23 +6,26 @@ import com.example.picheTest.model.request.DepositRQ;
 import com.example.picheTest.model.request.TransferRQ;
 import com.example.picheTest.model.request.WithdrawRQ;
 import com.example.picheTest.repository.AccountRepository;
+import com.example.picheTest.repository.TransactionHistoryRepository;
 import com.example.picheTest.repository.entity.Account;
+import com.example.picheTest.repository.entity.TransactionHistory;
+import com.example.picheTest.repository.entity.TransactionType;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.webjars.NotFoundException;
+
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
 @AllArgsConstructor
 public class AccountService {
-    @Autowired
     private AccountRepository repository;
-    @Autowired
     private EntityMapper entityMapper;
+    private TransactionHistoryRepository historyRepository;
 
     public List<Account> getAllAccounts() {
         return repository.findAll();
@@ -36,7 +39,10 @@ public class AccountService {
     public Account createAccount(AccountCreateRQ accountCreateRQ) {
         try {
             Account account = entityMapper.toAccount(accountCreateRQ);
-            return repository.save(account);
+            account = repository.save(account);
+            saveTransactionHistory( null, account.getId(), TransactionType.DEPOSIT, accountCreateRQ.getBalance());
+
+            return account;
         } catch (DataIntegrityViolationException e) {
             System.out.println("Account number already exists: " + accountCreateRQ.getAccountNumber());
             throw new IllegalArgumentException("Account number already exists: " + accountCreateRQ.getAccountNumber());
@@ -54,6 +60,8 @@ public class AccountService {
         account.setBalance(account.getBalance().add(depositRQ.getAmount()));
         repository.save(account);
 
+        saveTransactionHistory( null, account.getId(), TransactionType.DEPOSIT, depositRQ.getAmount());
+
         return account;
     }
 
@@ -66,6 +74,8 @@ public class AccountService {
         if (account != null && account.getBalance().compareTo(withdrawRQ.getAmount()) >= 0) {
             account.setBalance(account.getBalance().subtract(withdrawRQ.getAmount()));
             repository.save(account);
+
+            saveTransactionHistory(account.getId(), null, TransactionType.WITHDRAW, withdrawRQ.getAmount());
             return account;
         }
         else {
@@ -96,11 +106,22 @@ public class AccountService {
             toAccount.setBalance(toAccount.getBalance().add(transferRQ.getAmount()));
             repository.save(fromAccount);
             repository.save(toAccount);
+
+            saveTransactionHistory(fromAccount.getId(), toAccount.getId(), TransactionType.TRANSFER, transferRQ.getAmount());
             return true;
         }
         else {
             throw new IllegalArgumentException("Account " + transferRQ.getFromAccountNumber() + " does not have sufficient balance");
         }
+    }
+
+    private void saveTransactionHistory(Long accountIdFrom, Long accountIdTo, TransactionType transactionType, BigDecimal amount) {
+        TransactionHistory history = new TransactionHistory();
+        history.setAccountIdFrom(accountIdFrom);
+        history.setAccountIdTo(accountIdTo);
+        history.setTransactionType(transactionType);
+        history.setAmount(amount);
+        historyRepository.save(history);
     }
 
 }
